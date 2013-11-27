@@ -22,7 +22,6 @@ VARIABLES
     , moduleDe
     , groupesDe
     , affecteA
-    , contrainte
     
 INVARIANT
     etudiants <: ETUDIANT
@@ -33,21 +32,26 @@ INVARIANT
     & inscritA : etudiants <-> modules
     & moduleDe : projets --> modules
     & groupesDe : etudiants <-> groupes
-    & affecteA : projets +-> groupes
+    & affecteA : projets <-> etudiants
     
-    & contrainte : moduleDe~ +-> (groupesDe ; affecteA~)
+    & !mm.( mm : MODULE & mm : modules
+        => ( !ee.( ee : ETUDIANT & ee : etudiants & ee : dom(inscritA) & mm : ran(moduleDe) & ee : inscritA~[{mm}]
+                	=> ( card( affecteA~[{ee}] /\ moduleDe~[{mm}] ) <= 1 )
+            	)
+        )
+        )
+
     
 INITIALISATION
-    etudiants := ETUDIANT
-    || modules := MODULE
-    || groupes := GROUPE
-    || projets := PROJET
+    etudiants := {}
+    || modules := {}
+    || groupes := {}
+    || projets := {}
     
     || inscritA := {}
     || moduleDe := {}
     || groupesDe := {}
     || affecteA := {}
-    || contrainte := {}
     
     
 OPERATIONS
@@ -62,45 +66,51 @@ OPERATIONS
         & ee : etudiants
         & mm : MODULE
         & mm : modules
-        & mm /: inscritA[{ee}]
+        & ee |-> mm /: inscritA
+        
+        /* l'étudiant n'est pas affecté à un projet de mm */
+        /*& mm : ran(moduleDe)
+        & ee /: affecteA[moduleDe~[{mm}]]*/
+        & mm |-> ee /: (moduleDe~ ; affecteA)
+        
     THEN
         inscritA := inscritA \/ {ee |-> mm}
     END
     ;
     
-    inscrire_etudiant_groupe(ee, gg) =
+    inscrire_etudiant_projet(ee, pp) =
     PRE
         ee : ETUDIANT
         & ee : etudiants
-        & gg : GROUPE
-        & gg : groupes
+        & pp : PROJET
+        & pp : projets
         
-        // l'étudiant n'est pas déjà membre du groupe
-        & gg /: groupesDe[{ee}]
+        /* l'étudiant ne travaille pas déjà sur un projet du même module que pp */
+        & moduleDe[{pp}] /<: moduleDe[affecteA~[{ee}]]
         
-        // l'étudiant ne travaille pas déjà sur le module concerné par le groupe
-        & moduleDe[affecteA~[{gg}]] /<: moduleDe[affecteA~[groupesDe[{ee}]]]
+        /* l'étudiant est inscrit au module */
+        & ee : inscritA~[moduleDe[{pp}]]
     THEN
-        groupesDe := groupesDe \/ {ee |-> gg}
+        affecteA := affecteA \/ {pp |-> ee}
     END
     ;
     
-    affecter_groupe(gg, pp) =
+    /*affecter_groupe(gg, pp) =
     PRE
         gg : GROUPE
         & gg : groupes
         & pp : PROJET
         & pp : projets
         
-        // le projet n'est pas déjà affecté
+        le projet n'est pas déjà affecté
         & affecteA[{pp}] :{}
         
-        // aucun étudiant du groupe n'est déjà affecté à un projet du même module
+        aucun étudiant du groupe n'est déjà affecté à un projet du même module
         & moduleDe[{pp}] /<: moduleDe[affecteA~[groupesDe[groupesDe~[{gg}]]]]
     THEN
         affecteA := affecteA \/ {pp |-> gg}
     END
-    ;
+    ;*/
     
     /*
      * QUESTION 1.B
@@ -161,25 +171,27 @@ OPERATIONS
     
     /*
      * QUESTION 1.D
+     * return : Nombre de projets sur lequel travaille l'étudiant et ensemble de ces projets
      */
-    pp <-- liste_projets(ee) =
+    nn,pp <-- liste_projets(ee) =
     PRE
         ee : ETUDIANT
         & ee : etudiants
     THEN
-        pp := affecteA~[groupesDe[{ee}]]
+        pp := affecteA~[{ee}]
+        || nn := card(affecteA~[{ee}])
     END
     ;
    
     
     /*
      * QUESTION 1.E
-     */
-    ee <-- participent_a_plus_de(nn) =
+     *
+    ee <--*/ participent_a_plus_de(nn) =
     PRE
-        nn : NATURAL1
+        nn : NAT
     THEN
-         
+         skip
     END
     
 END
