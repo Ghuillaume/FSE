@@ -34,14 +34,11 @@ INVARIANT
     & groupesDe : etudiants <-> groupes
     & affecteA : projets <-> etudiants
     
-    & !mm.( mm : MODULE & mm : modules
-        => ( !ee.( ee : ETUDIANT & ee : etudiants & ee : dom(inscritA) & mm : ran(moduleDe) & ee : inscritA~[{mm}]
-                	=> ( card( affecteA~[{ee}] /\ moduleDe~[{mm}] ) <= 1 )
-            	)
-        )
-        )
+    & !mm.( mm : MODULE => 
+        ( !ee.( (ee : ETUDIANT) =>
+                	( card( affecteA~[{ee}] /\ moduleDe~[{mm}] ) <= 1 ) )
+        ))
 
-    
 INITIALISATION
     etudiants := {}
     || modules := {}
@@ -53,19 +50,19 @@ INITIALISATION
     || groupesDe := {}
     || affecteA := {}
     
-    
 OPERATIONS
     
     /*
      * QUESTION 1.A
      */
-    
     inscrire_etudiant_module(ee, mm) =
     PRE
         ee : ETUDIANT
         & ee : etudiants
         & mm : MODULE
         & mm : modules
+        
+        /* L'étudiant n'est pas déjà inscrit à mm */
         & ee |-> mm /: inscritA
         
         /* l'étudiant n'est pas affecté à un projet de mm */
@@ -86,7 +83,7 @@ OPERATIONS
         & pp : projets
         
         /* l'étudiant ne travaille pas déjà sur un projet du même module que pp */
-        & moduleDe[{pp}] /<: moduleDe[affecteA~[{ee}]]
+        & card( moduleDe~[{moduleDe(pp)}] /\ affecteA~[{ee}] ) = 0
         
         /* l'étudiant est inscrit au module */
         & ee : inscritA~[moduleDe[{pp}]]

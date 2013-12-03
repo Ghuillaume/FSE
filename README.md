@@ -3,6 +3,9 @@ FSE
 
 Formal Software Engineering project - B method
 
+[Lien vers le rapport](https://www.writelatex.com/559753drhftf)
+---------------------------------------------------------------
+
 
 Configuration AtelierB et importation du projet
 ===============================================
