@@ -1,0 +1,182 @@
+/* Evaluations_r
+ * Author: 
+ * Creation date: mer. déc. 4 2013
+ */
+REFINEMENT
+   Evaluations_r
+REFINES
+   Evaluations
+
+ABSTRACT_VARIABLES
+   etudiants ,
+   modules ,
+   groupes ,
+   projets ,
+   inscritA ,
+   moduleDe ,
+   groupesDe ,
+   affecteA ,
+   affecteGroupeA ,
+   note
+
+INITIALISATION
+   etudiants := {} ||
+   modules := {} ||
+   groupes := {} ||
+   projets := {} ||
+   inscritA := {} ||
+   moduleDe := {} ||
+   groupesDe := {} ||
+   affecteA := {} ||
+   affecteGroupeA := {} ||
+   note := {}
+
+OPERATIONS
+   inscrire_etudiant_module ( ee , mm ) =
+   PRE
+       ee : ETUDIANT & ee : etudiants & mm : MODULE & mm : modules & ee |-> mm /: inscritA & mm |-> ee /: ( moduleDe ~ ; affecteA )
+   THEN
+       inscritA := inscritA \/ { ee |-> mm }
+   END
+   ;
+
+   desinscrire_etudiant_module ( ee , mm ) =
+   PRE
+       ee : ETUDIANT & ee : etudiants & mm : MODULE & mm : modules & ee , mm : inscritA
+   THEN
+       inscritA := inscritA - { ee |-> mm } ||
+       ANY projet
+       WHERE
+           projet : PROJET & projet = moduleDe ~ ( mm )
+       THEN
+           affecteA := affecteA - { projet |-> ee } ||
+           groupesDe := groupesDe - { ee |-> affecteGroupeA ( projet ) }
+       END
+   END
+   ;
+
+   inscrire_etudiant_projet ( ee , pp ) =
+   PRE
+       ee : ETUDIANT & ee : etudiants & pp : PROJET & pp : projets & pp : dom ( affecteGroupeA ) & card ( moduleDe ~ [ { moduleDe ( pp ) } ] /\ affecteA ~ [ { ee } ] ) = 0 & ee : inscritA ~ [ moduleDe [ { pp } ] ]
+   THEN
+       affecteA := affecteA \/ { pp |-> ee } ||
+       groupesDe := groupesDe \/ { ee |-> affecteGroupeA ( pp ) }
+   END
+   ;
+
+   desinscrire_etudiant_projet ( ee , pp ) =
+   PRE
+       ee : ETUDIANT & ee : etudiants & pp : PROJET & pp : projets & pp , ee : affecteA
+   THEN
+       affecteA := affecteA - { pp |-> ee } ||
+       groupesDe := groupesDe - { ee |-> affecteGroupeA ( pp ) }
+   END
+   ;
+
+   ajouter_module ( mm ) =
+   PRE
+       mm : MODULE & mm /: modules
+   THEN
+       modules := modules \/ { mm }
+   END
+   ;
+
+   ajouter_groupe ( gg ) =
+   PRE
+       gg : GROUPE & gg /: groupes
+   THEN
+       groupes := groupes \/ { gg }
+   END
+   ;
+
+   ajouter_projet ( pp , mm ) =
+   PRE
+       pp : PROJET & pp /: projets &  mm : MODULE & mm : modules & mm /: ran ( inscritA ) & mm /: ran ( moduleDe ) & pp /: dom ( affecteA ) & pp /: dom ( moduleDe )
+   THEN
+       projets := projets \/ { pp } ||
+       moduleDe := moduleDe \/ { pp |-> mm }
+   END
+   ;
+
+   affecter_groupe ( gg , pp ) =
+   PRE
+       gg : GROUPE & gg : groupes & pp : PROJET & pp : projets & pp /: dom ( affecteGroupeA )
+   THEN
+       affecteGroupeA := affecteGroupeA \/ { pp |-> gg }
+   END
+   ;
+
+   ajouter_etudiant ( ee ) =
+   PRE
+       ee : ETUDIANT & ee /: etudiants
+   THEN
+       etudiants := etudiants \/ { ee }
+   END
+   ;
+
+   gg <-- liste_groupes ( ee ) =
+   PRE
+       ee : ETUDIANT & ee : etudiants
+   THEN
+       gg := groupesDe [ { ee } ]
+   END
+   ;
+
+   nn , pp <-- liste_projets ( ee ) =
+   PRE
+       ee : ETUDIANT & ee : etudiants
+   THEN
+       pp := affecteA ~ [ { ee } ] ||
+       nn := card ( affecteA ~ [ { ee } ] )
+   END
+   ;
+
+   ee <-- participent_a_plus_de ( nn ) =
+   PRE
+       nn : NAT & ee <: ETUDIANT
+   THEN
+       ANY etudiant
+       WHERE
+           etudiant : ETUDIANT & etudiant : etudiants
+       THEN
+           IF ( card ( groupesDe [ { etudiant } ] ) > nn )
+           THEN
+               ee := ee \/ { etudiant }
+           END
+       END
+   END
+   ;
+
+   nn <-- obtenir_note ( ee , mm ) =
+   PRE
+       ee : ETUDIANT & ee : etudiants & mm : MODULE & mm : modules & ( ee |-> mm ) : dom ( note )
+   THEN
+       nn := note ( ee , mm )
+   END
+   ;
+
+   saisir_note ( ee , mm , nn ) =
+   PRE
+       ee : ETUDIANT & ee : etudiants & mm : MODULE & mm : modules & nn : NAT
+   THEN
+       note ( ee , mm ) := nn
+   END
+   ;
+
+   ee <-- etudiants_sans_note =
+   PRE
+       ee <: ETUDIANT
+   THEN
+       ANY etudiant
+       WHERE
+           etudiant : ETUDIANT & etudiant : etudiants
+       THEN
+           IF ( etudiant /: dom ( dom ( note ) ) )
+           THEN
+               ee := ee \/ { etudiant }
+           END
+       END
+   END
+
+
+END

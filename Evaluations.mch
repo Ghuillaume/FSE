@@ -219,7 +219,7 @@ OPERATIONS
         gg := groupesDe[{ee}]
     END
     ;
-   
+    
     
     /*
      * QUESTION 1.D
