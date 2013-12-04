@@ -23,6 +23,7 @@ VARIABLES
     , groupesDe
     , affecteA
     , affecteGroupeA
+    , note
     
 INVARIANT
     etudiants <: ETUDIANT
@@ -35,6 +36,8 @@ INVARIANT
     & groupesDe : etudiants <-> groupes
     & affecteA : projets <-> etudiants
     & affecteGroupeA : projets +-> groupes
+    
+    & note : (etudiants * modules) +-> NAT
     
     & groupesDe <: ( affecteA~ ; affecteGroupeA )
     
@@ -55,6 +58,7 @@ INITIALISATION
     || groupesDe := {}
     || affecteA := {}
     || affecteGroupeA := {}
+    || note := {}
     
 OPERATIONS
     
@@ -247,5 +251,46 @@ OPERATIONS
         END
 
     END
+    ;
+    
+    /*
+    * QUESTIONS SUPPLÉMENTAIRES
+    *
+    * note : (etudiants * modules) +-> NATURAL
+    */
+    nn <-- obtenir_note(ee, mm) =
+    PRE
+        ee : ETUDIANT
+        & ee : etudiants
+        & mm : MODULE
+        & mm : modules
+        & (ee |-> mm) : dom(note)
+    THEN
+        nn := note(ee, mm)
+    END
+    ;
+    
+    saisir_note(ee, mm, nn) =
+    PRE
+        ee : ETUDIANT
+        & ee : etudiants
+        & mm : MODULE
+        & mm : modules
+        & nn : NAT
+    THEN
+        note(ee,mm) := nn
+    END
+    ;
+    
+    ee <-- etudiants_sans_note =
+    PRE
+        ee <: ETUDIANT
+    THEN
+        ANY etudiant WHERE etudiant : ETUDIANT & etudiant : etudiants THEN
+            IF (etudiant /: dom(dom(note)))
+            THEN ee := ee \/ {etudiant}
+            END
+        END
+	END
     
 END
