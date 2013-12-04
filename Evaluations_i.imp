@@ -1,50 +1,23 @@
-/* Evaluations_r
+/* Evaluations_i
  * Author: 
  * Creation date: mer. déc. 4 2013
  */
-REFINEMENT
-   Evaluations_r
+IMPLEMENTATION
+   Evaluations_i
 REFINES
-    Evaluations
-    
-SETS 
-    OKKO = {ok,ko}
-    
-CONCRETE_VARIABLES
-    c_etudiants,
-    c_modules,
-    c_groupes,
-	c_projets
-    
-ABSTRACT_VARIABLES
-   inscritA ,
-   moduleDe ,
-   groupesDe ,
-   affecteA ,
-   affecteGroupeA ,
-   note
-   
-INVARIANT
-    c_etudiants : ETUDIANT --> OKKO
-    & etudiants = c_etudiants~[{ok}]
-    & c_modules : MODULE --> OKKO
-    & modules = c_modules~[{ok}]
-    & c_groupes : GROUPE --> OKKO
-    & groupes = c_groupes~[{ok}]
-    & c_projets : PROJET --> OKKO
-    & projets = c_projets~[{ok}]
+   Evaluations
+
 
 INITIALISATION
-   c_etudiants := (ETUDIANT)*{ko} ||
-   c_modules := (MODULE)*{ko} ||
-   c_groupes := (GROUPE)*{ko} ||
-   c_projets := (PROJET)*{ko} ||
-
-   inscritA := {} ||
-   moduleDe := {} ||
-   groupesDe := {} ||
-   affecteA := {} ||
-   affecteGroupeA := {} ||
+   etudiants := {} ;
+   modules := {} ;
+   groupes := {} ;
+   projets := {} ;
+   inscritA := {} ;
+   moduleDe := {} ;
+   groupesDe := {} ;
+   affecteA := {} ;
+   affecteGroupeA := {} ;
    note := {}
 
 OPERATIONS
@@ -56,12 +29,12 @@ OPERATIONS
 
    desinscrire_etudiant_module ( ee , mm ) =
    BEGIN
-       inscritA := inscritA - { ee |-> mm } ||
+       inscritA := inscritA - { ee |-> mm }
        ANY projet
        WHERE
            projet : PROJET & projet = moduleDe ~ ( mm )
        THEN
-           affecteA := affecteA - { projet |-> ee } ||
+           affecteA := affecteA - { projet |-> ee }
            groupesDe := groupesDe - { ee |-> affecteGroupeA ( projet ) }
        END
    END
@@ -69,67 +42,79 @@ OPERATIONS
 
    inscrire_etudiant_projet ( ee , pp ) =
    BEGIN
-       affecteA := affecteA \/ { pp |-> ee } ||
+       affecteA := affecteA \/ { pp |-> ee }
        groupesDe := groupesDe \/ { ee |-> affecteGroupeA ( pp ) }
    END
    ;
 
    desinscrire_etudiant_projet ( ee , pp ) =
    BEGIN
-       affecteA := affecteA - { pp |-> ee } ||
+       affecteA := affecteA - { pp |-> ee }
        groupesDe := groupesDe - { ee |-> affecteGroupeA ( pp ) }
    END
    ;
 
    ajouter_module ( mm ) =
    BEGIN
-       c_modules(mm) := ok
+       modules := modules \/ { mm }
    END
    ;
 
    ajouter_groupe ( gg ) =
    BEGIN
-       c_groupes(gg) := ok
+       groupes := groupes \/ { gg }
    END
    ;
 
    ajouter_projet ( pp , mm ) =
-   BEGIN
-       c_projets(pp) := ok ||
+   PRE
+       pp : PROJET & pp /: projets &  mm : MODULE & mm : modules & mm /: ran ( inscritA ) & mm /: ran ( moduleDe ) & pp /: dom ( affecteA ) & pp /: dom ( moduleDe )
+   THEN
+       projets := projets \/ { pp } ||
        moduleDe := moduleDe \/ { pp |-> mm }
    END
    ;
 
    affecter_groupe ( gg , pp ) =
-   BEGIN
+   PRE
+       gg : GROUPE & gg : groupes & pp : PROJET & pp : projets & pp /: dom ( affecteGroupeA )
+   THEN
        affecteGroupeA := affecteGroupeA \/ { pp |-> gg }
    END
    ;
 
    ajouter_etudiant ( ee ) =
-   BEGIN
-       c_etudiants(ee) := ok
+   PRE
+       ee : ETUDIANT & ee /: etudiants
+   THEN
+       etudiants := etudiants \/ { ee }
    END
    ;
 
    gg <-- liste_groupes ( ee ) =
-   BEGIN
+   PRE
+       ee : ETUDIANT & ee : etudiants
+   THEN
        gg := groupesDe [ { ee } ]
    END
    ;
 
    nn , pp <-- liste_projets ( ee ) =
-   BEGIN
+   PRE
+       ee : ETUDIANT & ee : etudiants
+   THEN
        pp := affecteA ~ [ { ee } ] ||
        nn := card ( affecteA ~ [ { ee } ] )
    END
    ;
 
    ee <-- participent_a_plus_de ( nn ) =
-   BEGIN
+   PRE
+       nn : NAT & ee <: ETUDIANT
+   THEN
        ANY etudiant
        WHERE
-           etudiant : c_etudiants |> {ok}
+           etudiant : ETUDIANT & etudiant : etudiants
        THEN
            IF ( card ( groupesDe [ { etudiant } ] ) > nn )
            THEN
@@ -140,22 +125,28 @@ OPERATIONS
    ;
 
    nn <-- obtenir_note ( ee , mm ) =
-   BEGIN
+   PRE
+       ee : ETUDIANT & ee : etudiants & mm : MODULE & mm : modules & ( ee |-> mm ) : dom ( note )
+   THEN
        nn := note ( ee , mm )
    END
    ;
 
    saisir_note ( ee , mm , nn ) =
-   BEGIN
+   PRE
+       ee : ETUDIANT & ee : etudiants & mm : MODULE & mm : modules & nn : NAT
+   THEN
        note ( ee , mm ) := nn
    END
    ;
 
    ee <-- etudiants_sans_note =
-   BEGIN
+   PRE
+       ee <: ETUDIANT
+   THEN
        ANY etudiant
        WHERE
-           etudiant : c_etudiants |> {ok}
+           etudiant : ETUDIANT & etudiant : etudiants
        THEN
            IF ( etudiant /: dom ( dom ( note ) ) )
            THEN
