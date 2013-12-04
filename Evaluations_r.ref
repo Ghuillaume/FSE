@@ -129,7 +129,7 @@ OPERATIONS
    BEGIN
        ANY etudiant
        WHERE
-           etudiant : c_etudiants |> {ok}
+           etudiant : dom(c_etudiants |> {ok})
        THEN
            IF ( card ( groupesDe [ { etudiant } ] ) > nn )
            THEN
@@ -155,7 +155,7 @@ OPERATIONS
    BEGIN
        ANY etudiant
        WHERE
-           etudiant : c_etudiants |> {ok}
+           etudiant : dom(c_etudiants |> {ok})
        THEN
            IF ( etudiant /: dom ( dom ( note ) ) )
            THEN
