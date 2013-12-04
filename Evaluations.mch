@@ -37,7 +37,8 @@ INVARIANT
     & !mm.( mm : MODULE => 
         ( !ee.( (ee : ETUDIANT) =>
                 	( card( affecteA~[{ee}] /\ moduleDe~[{mm}] ) <= 1 ) )
-        ))
+         ))
+     
 
 INITIALISATION
     etudiants := {}
@@ -66,12 +67,29 @@ OPERATIONS
         & ee |-> mm /: inscritA
         
         /* l'étudiant n'est pas affecté à un projet de mm */
-        /*& mm : ran(moduleDe)
-        & ee /: affecteA[moduleDe~[{mm}]]*/
         & mm |-> ee /: (moduleDe~ ; affecteA)
         
     THEN
         inscritA := inscritA \/ {ee |-> mm}
+    END
+    ;
+    
+    desinscrire_etudiant_module(ee, mm) =
+    PRE
+        ee : ETUDIANT
+        & ee : etudiants
+        & mm : MODULE
+        & mm : modules
+        
+        /* L'étudiant est inscrit à mm */
+        & ee |-> mm : inscritA
+        
+    THEN
+        /* Desinscrire l'étudiant + le désafecter des projets */
+        inscritA := inscritA - {ee |-> mm}
+        || ANY projet WHERE projet : PROJET & projet = moduleDe~(mm) THEN
+            affecteA := affecteA - { projet |-> ee }
+        END
     END
     ;
     
@@ -89,6 +107,20 @@ OPERATIONS
         & ee : inscritA~[moduleDe[{pp}]]
     THEN
         affecteA := affecteA \/ {pp |-> ee}
+    END
+    ;
+    
+    desinscrire_etudiant_projet(ee, pp) =
+    PRE
+        ee : ETUDIANT
+        & ee : etudiants
+        & pp : PROJET
+        & pp : projets
+        
+        /* l'étudiant travaille sur pp */
+        & pp |-> ee : affecteA
+    THEN
+        affecteA := affecteA - {pp |-> ee}
     END
     ;
     
@@ -131,12 +163,19 @@ OPERATIONS
     END
     ;
     
+    /* Pourquoi on peut pas prouver ??
+    On vérifie que mm et pp ne sont dans aucune relation
+    L'invariant devrait être vérifié....*/
     ajouter_projet(pp, mm) =
     PRE
         pp : PROJET
         & pp /: projets
         & mm : MODULE
         & mm : modules
+        & mm /: ran(inscritA)
+        & mm /: ran(moduleDe)
+        & pp /: dom(affecteA)
+        & pp /: dom(moduleDe)
     THEN
         projets := projets \/ {pp}
         || moduleDe := moduleDe \/ {pp |-> mm}
@@ -183,12 +222,15 @@ OPERATIONS
     
     /*
      * QUESTION 1.E
-     *
-    ee <--*/ participent_a_plus_de(nn) =
+     */
+    ee <-- participent_a_plus_de(nn) =
     PRE
         nn : NAT
     THEN
-         skip
+        ANY etudiant WHERE etudiant : ETUDIANT & etudiant : etudiants THEN
+        	ee := ee \/ {etudiant}
+        END
+
     END
     
 END
