@@ -7,22 +7,20 @@ REFINEMENT
 REFINES
     Evaluations
     
-SETS 
-    OKKO = {ok,ko}
+SEES
+    CtxR_Evaluations
     
 CONCRETE_VARIABLES
     c_etudiants,
     c_modules,
     c_groupes,
-	c_projets
+    c_projets,
     
-ABSTRACT_VARIABLES
-   inscritA ,
-   moduleDe ,
-   groupesDe ,
-   affecteA ,
-   affecteGroupeA ,
-   note
+    c_est_inscrit_a,
+	c_module_de,
+    c_realise_par,
+    c_realise_par_groupe,
+    c_note
    
 INVARIANT
     c_etudiants : ETUDIANT --> OKKO
@@ -33,51 +31,59 @@ INVARIANT
     & groupes = c_groupes~[{ok}]
     & c_projets : PROJET --> OKKO
     & projets = c_projets~[{ok}]
-
+    
+    & c_est_inscrit_a : (ETUDIANT * (MODULE)) --> 0..1
+    & est_inscrit_a = dom(c_est_inscrit_a |> {1} )
+    & c_module_de : PROJET --> MODULE
+    & module_de = (projets <| c_module_de |> modules)
+    & c_realise_par : (PROJET * (ETUDIANT)) --> 0..1
+    & realise_par = dom(c_realise_par |> {1} )
+    & c_realise_par_groupe : PROJET --> GROUPE
+    & realise_par_groupe = (projets <| c_realise_par_groupe |> groupes)
+    & c_note : (ETUDIANT*MODULE) --> NAT
+    & note = ((etudiants*modules) <| c_note)
+    
+    
 INITIALISATION
    c_etudiants := (ETUDIANT)*{ko} ||
    c_modules := (MODULE)*{ko} ||
    c_groupes := (GROUPE)*{ko} ||
    c_projets := (PROJET)*{ko} ||
-
-   inscritA := {} ||
-   moduleDe := {} ||
-   groupesDe := {} ||
-   affecteA := {} ||
-   affecteGroupeA := {} ||
-   note := {}
+   
+   c_est_inscrit_a := (ETUDIANT * (MODULE))*{0} ||
+   c_module_de := (PROJET)*(MODULE) ||
+   c_realise_par := (PROJET * (ETUDIANT))*{0} ||
+   c_realise_par_groupe := (PROJET)*(GROUPE) ||
+   c_note := ((ETUDIANT)*(MODULE))*(NAT)
 
 OPERATIONS
    inscrire_etudiant_module ( ee , mm ) =
    BEGIN
-       inscritA := inscritA \/ { ee |-> mm }
+       c_est_inscrit_a(ee |-> mm) := 1
    END
    ;
 
    desinscrire_etudiant_module ( ee , mm ) =
    BEGIN
-       inscritA := inscritA - { ee |-> mm } ||
+       c_est_inscrit_a(ee |-> mm) := 1 ||
        ANY projet
        WHERE
-           projet : PROJET & projet = moduleDe ~ ( mm )
+           projet : PROJET & projet = c_module_de~(mm)
        THEN
-           affecteA := affecteA - { projet |-> ee } ||
-           groupesDe := groupesDe - { ee |-> affecteGroupeA ( projet ) }
+           c_realise_par( projet |-> ee ) := 1
        END
    END
    ;
 
    inscrire_etudiant_projet ( ee , pp ) =
    BEGIN
-       affecteA := affecteA \/ { pp |-> ee } ||
-       groupesDe := groupesDe \/ { ee |-> affecteGroupeA ( pp ) }
+       c_realise_par( pp |-> ee ) := 1
    END
    ;
 
    desinscrire_etudiant_projet ( ee , pp ) =
    BEGIN
-       affecteA := affecteA - { pp |-> ee } ||
-       groupesDe := groupesDe - { ee |-> affecteGroupeA ( pp ) }
+       c_realise_par( pp |-> ee ) := 1
    END
    ;
 
@@ -96,13 +102,13 @@ OPERATIONS
    ajouter_projet ( pp , mm ) =
    BEGIN
        c_projets(pp) := ok ||
-       moduleDe := moduleDe \/ { pp |-> mm }
+       c_module_de(pp) := mm
    END
    ;
 
    affecter_groupe ( gg , pp ) =
    BEGIN
-       affecteGroupeA := affecteGroupeA \/ { pp |-> gg }
+       c_realise_par_groupe(pp) := gg
    END
    ;
 
@@ -112,42 +118,42 @@ OPERATIONS
    END
    ;
 
-   gg <-- liste_groupes ( ee ) =
+   /*gg <-- liste_groupes ( ee ) =
    BEGIN
-       gg := groupesDe [ { ee } ]
+       gg := ran(dom( ( {ee} <| dom(c_est_dans_groupe)) <| c_est_dans_groupe |> {1}))
    END
-   ;
+   ;*/
 
    nn , pp <-- liste_projets ( ee ) =
    BEGIN
-       pp := affecteA ~ [ { ee } ] ||
-       nn := card ( affecteA ~ [ { ee } ] )
+       pp := dom(dom( (dom(c_realise_par) |> {ee}) <| c_realise_par |> {1})) ||
+       nn := card ( dom(dom( (dom(c_realise_par) |> {ee}) <| c_realise_par |> {1})) )
    END
    ;
 
-   ee <-- participent_a_plus_de ( nn ) =
+   /*ee <-- participent_a_plus_de ( nn ) =
    BEGIN
        ANY etudiant
        WHERE
            etudiant : dom(c_etudiants |> {ok})
        THEN
-           IF ( card ( groupesDe [ { etudiant } ] ) > nn )
+           IF ( card ( ran(dom( ( {etudiant} <| dom(c_est_dans_groupe)) <| c_est_dans_groupe |> {1})) ) > nn )
            THEN
                ee := ee \/ { etudiant }
            END
        END
    END
-   ;
+   ;*/
 
    nn <-- obtenir_note ( ee , mm ) =
    BEGIN
-       nn := note ( ee , mm )
+       nn := c_note ( ee , mm )
    END
    ;
 
    saisir_note ( ee , mm , nn ) =
    BEGIN
-       note ( ee , mm ) := nn
+       c_note ( ee , mm ) := nn
    END
    ;
 
@@ -155,9 +161,9 @@ OPERATIONS
    BEGIN
        ANY etudiant
        WHERE
-           etudiant : dom(c_etudiants |> {ok})
+           etudiant : ETUDIANT & etudiant : dom(c_etudiants |> {ok})
        THEN
-           IF ( etudiant /: dom ( dom ( note ) ) )
+           IF ( etudiant /: dom ( dom ( c_note ) ) )
            THEN
                ee := ee \/ { etudiant }
            END
